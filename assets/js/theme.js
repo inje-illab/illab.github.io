@@ -1,184 +1,111 @@
-jQuery(document).ready(function($){
+// Theme switcher based on CSS variables made by Fernardo Paredes
+// https://www.fdp.io/blog/2016/11/08/theming-via-css-properties/
 
-    // Smooth on external page
-    $(function() {
-      setTimeout(function() {
-        if (location.hash) {
-          /* we need to scroll to the top of the window first, because the browser will always jump to the anchor first before JavaScript is ready, thanks Stack Overflow: http://stackoverflow.com/a/3659116 */
-          window.scrollTo(0, 0);
-          target = location.hash.split('#');
-          smoothScrollTo($('#'+target[1]));
-        }
-      }, 1);
+// Polyfilling Object.entries for Safari :/
+Object.entries = (object) => Object.keys(object).map(
+  (key) => [ key, object[key] ]
+)
 
-      // taken from: https://css-tricks.com/snippets/jquery/smooth-scrolling/
-      $('a[href*=\\#]:not([href=\\#])').click(function() {
-        if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'') && location.hostname == this.hostname) {
-          smoothScrollTo($(this.hash));
-          return false;
-        }
-      });
+const isObject = (obj) => obj === Object(obj)
 
-      function smoothScrollTo(target) {
-        target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
-
-        if (target.length) {
-          $('html,body').animate({
-            scrollTop: target.offset().top
-          }, 1000);
-        }
-      }
-    });
-	
-	
-	// toggle comments
-    $('.show-comments').on('click', function() {  
-		$('#comments').toggleClass('comments--show');		
-	});
-
-	//toggle search
-	$('.show-search').on('click', function() {  
-		$('.bd-search').toggleClass('search--show');		
-	});
-    
-    // spoilers
-     $(document).on('click', '.spoiler', function() {
-        $(this).removeClass('spoiler');
-     });
-    
- });   
-
-// deferred style loading
-var loadDeferredStyles = function () {
-	var addStylesNode = document.getElementById("deferred-styles");
-	var replacement = document.createElement("div");
-	replacement.innerHTML = addStylesNode.textContent;
-	document.body.appendChild(replacement);
-	addStylesNode.parentElement.removeChild(addStylesNode);
-};
-var raf = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
-	window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
-if (raf) raf(function () {
-	window.setTimeout(loadDeferredStyles, 0);
-});
-else window.addEventListener('load', loadDeferredStyles);
-
-
-// Reset animations on page: body.preload
-setTimeout(function(){
-	document.body.className="";
-},500);
-
-// Open/close navigation when clicked .nav-icon
-$(document).ready(function(){
-	$('.nav-icon').click(function(){
-		$('.nav-icon').toggleClass('active');
-	});
-	$(".nav-icon").click(function(){
-		$("#menu").toggleClass('active');
-	});
-	$(".nav-icon").click(function(){
-		$("#blackover-nav").toggleClass('active');
-	});
-	$(".nav-icon").click(function(){
-		$("body").toggleClass('active-side');
-	});
-});
-
-// Close navigation when clicked .blackover (Black background)
-$(document).ready(function(){
-	$("#blackover-nav").click(function(){
-		$(".nav-icon").removeClass('active');
-	});
-	$("#blackover-nav").click(function(){
-		$("#menu").removeClass('active');
-	});
-	$("#blackover-nav").click(function(){
-		$("#blackover-nav").removeClass('active');
-	});
-	$("#blackover-nav").click(function(){
-		$("body").removeClass('active-side');
-	});
-});
-
-// Grid selector Inspiration
-$(document).ready(function(){
-	$(".grid-selector").click(function(){
-		$(".grid-selector").toggleClass('active');
-	});
-	$(".grid-selector").click(function(){
-		$(".post").toggleClass('active');
-	});
-});
-
-$(document).keyup(function(e) {
-	if (e.keyCode == 27) { 
-		$(".nav-icon").removeClass('active');
-		$("#menu").removeClass('active');
-		$("#blackover-nav").removeClass('active');
-		$("body").removeClass('active-side');
-	}
-});
-
-
-// remove all :hover stylesheets on mobile
-function hasTouch() {
-return 'ontouchstart' in document.documentElement
-		|| navigator.maxTouchPoints > 0
-		|| navigator.msMaxTouchPoints > 0;
+const LightTheme = {
+  '--bg-color': '#eee',
+  '--text-color': '#484848',
+  '--text-color-light': '#828282',
+  '--link-color': '#000',
+  '--metadata-color': '#999',
+  '--post-title': '#313131',
+  '--code-bg-color': '#fff',
+  '--code-border': '#f5f5f5',
+  '--table-border-color': '#e5e5e5',
+  '--table-header-color': '#fefefe',
+  '--shadow-color': 'rgba(0, 0, 0, 0.1)',
+  '--invert-logo-color': 'invert(0)',
+  themeName: 'LightTheme'
 }
 
-if (hasTouch()) { 
-	try {
-		for (var si in document.styleSheets) {
-			var styleSheet = document.styleSheets[si];
-			if (!styleSheet.rules) continue;
-
-			for (var ri = styleSheet.rules.length - 1; ri >= 0; ri--) {
-				if (!styleSheet.rules[ri].selectorText) continue;
-
-				if (styleSheet.rules[ri].selectorText.match(':hover')) {
-					styleSheet.deleteRule(ri);
-				}
-			}
-		}
-	} catch (ex) {}
+const NightTheme = {
+  '--bg-color': '#1c1c1c',
+  '--text-color': '#c4c4c4',
+  '--text-color-light': '#777',
+  '--link-color': '#f1f1f1',
+  '--metadata-color': '#666',
+  '--post-title': '#fff',
+  '--code-bg-color': '#252525',
+  '--code-border': '#222',
+  '--table-border-color': '#292929',
+  '--table-header-color': '#505050',
+  '--shadow-color': 'rgba(255, 255, 255, 0.1)',
+  '--invert-logo-color': 'invert(1)',
+  themeName: 'NightTheme'
 }
 
+const setCSSVariable = (key, value) => document.body.style.setProperty(key, value)
 
-$(document).ready(function(){
+const saveTheme = (theme) => {
+  if (window.localStorage) {
+    localStorage['theme'] = JSON.stringify(theme)
+    localStorage['currentTheme'] = theme.themeName
+  }
+}
 
-    //Check to see if the window is top if not then display button
-    $(window).scroll(function(){
-        if ($(this).scrollTop() > 300) {
-            $('.scroll-top').addClass('active');
-        } else {
-            $('.scroll-top').removeClass('active');
-        }
-    });
+const loadSavedTheme = () => {
+  if (window.localStorage) {
+    const maybeTheme = localStorage['theme']
+    if (maybeTheme) return JSON.parse(maybeTheme)
+  }
 
-    //Click event to scroll to top
-    $('.scroll-top').click(function(){
-        $('html, body').animate({scrollTop : 0},300);
-        return false;
-    });
+  return null
+}
 
-});
+const updateTheme = (theme) => {
+  if (!isObject(theme)) return
 
+  Object
+  .entries(theme)
+  .forEach(([key, value]) => setCSSVariable(key, value))
 
-// DOCS
+  saveTheme(theme)
+}
 
-$(document).ready(function(){
-    
+const checkForSavedTheme = () => {
+  const theme = loadSavedTheme()
+  if (theme) updateTheme(theme)
+}
 
-     //Check to see if the back-menu is in the div
-    $(window).scroll(function(){
-        if ($(this).scrollTop() > 130) {
-            $('.back-page-button-dark').removeClass('back-page-button-w');
-        } else {
-            $('.back-page-button-dark').addClass('back-page-button-w');
-        }
-    });
+const switchTheme = () => {
+  const el = document.getElementById('theme-switcher')
+  // Check if we have a saved theme
+  const theme = loadSavedTheme()
+  const currentTheme = localStorage['currentTheme']
+  if (theme && currentTheme === NightTheme.themeName) {
+    updateTheme(LightTheme)
+    el.className = iconForTheme(LightTheme.themeName)
+  } else {
+    updateTheme(NightTheme)
+    el.className = iconForTheme(NightTheme.themeName)
+  }
+}
 
+const iconForTheme = (themeName) => {
+  if (themeName === NightTheme.themeName) {
+    return 'icon-invert_colors'
+  } else {
+    return 'icon-invert_colors2'
+  }
+}
 
-});
+// initiate
+
+// set inital theme to light
+updateTheme(LightTheme);
+checkForSavedTheme();
+
+const el = document.getElementById('theme-switcher');
+
+if (window.localStorage && localStorage['currentTheme']) {
+  var iconClasses = iconForTheme(localStorage['currentTheme']);
+  el.className = iconClasses;
+} else {
+  el.className = iconForTheme();
+}
